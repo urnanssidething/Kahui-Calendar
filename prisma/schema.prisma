@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  jobsAssigned    Job[]        @relation("JobAssignedTo")
+  jobsCreated     Job[]        @relation("JobCreatedBy")
+  jobsUpdated     Job[]        @relation("JobUpdatedBy")
+
+  @@map("users")
+}
+
+model Client {
+  id             String   @id @default(cuid())
+  name           String
+  email          String
+  phone          String?
+  address        String
+  notes          String?
+  defaultRate    Decimal? @map("default_rate") @db.Decimal(10, 2)
+  xeroContactId  String?  @map("xero_contact_id")
+  archived       Boolean  @default(false)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  jobs        Job[]
+  recurrences Recurrence[]
+
+  @@map("clients")
+}
+
+enum ServiceType {
+  airbnb
+  residential
+  commercial
+  window
+}
+
+enum JobStatus {
+  scheduled
+  done
+  cancelled
+}
+
+model Job {
+  id             String      @id @default(cuid())
+  clientId       String      @map("client_id")
+  client         Client      @relation(fields: [clientId], references: [id])
+  serviceType    ServiceType @map("service_type")
+  startsAt       DateTime    @map("starts_at")
+  endsAt         DateTime    @map("ends_at")
+  address        String
+  price          Decimal     @db.Decimal(10, 2)
+  status         JobStatus   @default(scheduled)
+  notes          String?
+  assignedToId   String?     @map("assigned_to")
+  assignedTo     User?       @relation("JobAssignedTo", fields: [assignedToId], references: [id])
+  recurrenceId   String?     @map("recurrence_id")
+  recurrence     Recurrence? @relation(fields: [recurrenceId], references: [id])
+  invoicedAt     DateTime?   @map("invoiced_at")
+  xeroInvoiceId  String?     @map("xero_invoice_id")
+  createdById    String      @map("created_by")
+  createdBy      User        @relation("JobCreatedBy", fields: [createdById], references: [id])
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedById    String      @map("updated_by")
+  updatedBy      User        @relation("JobUpdatedBy", fields: [updatedById], references: [id])
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  @@index([startsAt])
+  @@index([clientId])
+  @@index([recurrenceId])
+  @@map("jobs")
+}
+
+enum RecurrencePattern {
+  weekly
+  fortnightly
+  monthly
+}
+
+model Recurrence {
+  id          String            @id @default(cuid())
+  clientId    String            @map("client_id")
+  client      Client            @relation(fields: [clientId], references: [id])
+  pattern     RecurrencePattern
+  dayOfWeek   Int               @map("day_of_week") // 0=Sunday .. 6=Saturday
+  time        String            // "HH:mm" in Pacific/Auckland
+  duration    Int               // minutes
+  serviceType ServiceType       @map("service_type")
+  price       Decimal           @db.Decimal(10, 2)
+  address     String
+  active      Boolean           @default(true)
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  jobs Job[]
+
+  @@map("recurrences")
+}
