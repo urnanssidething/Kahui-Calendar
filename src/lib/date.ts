@@ -68,6 +68,24 @@ export function nzTimeInputValue(date: Date): string {
   return `${hour}:${minute}`;
 }
 
+/** 0 (Sunday) .. 6 (Saturday) for the given instant, as seen on a NZ wall clock. */
+export function nzDayOfWeek(date: Date): number {
+  const weekday = new Intl.DateTimeFormat("en-US", {
+    timeZone: NZ_TZ,
+    weekday: "short",
+  }).format(date);
+  const map: Record<string, number> = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+  };
+  return map[weekday] ?? 0;
+}
+
 /** [start, end) UTC instants covering one NZ calendar day, `offsetDays` from today. */
 export function nzDayRange(offsetDays = 0): { start: Date; end: Date } {
   const start = nzMidnightUtc(offsetDays);
