@@ -39,6 +39,7 @@ export default async function EditJobPage(props: PageProps<"/jobs/[id]/edit">) {
           assignedToId: job.assignedToId,
           notes: job.notes,
           updatedAt: job.updatedAt.toISOString(),
+          recurrenceId: job.recurrenceId,
         }}
         clients={clients.map((c) => ({
           id: c.id,

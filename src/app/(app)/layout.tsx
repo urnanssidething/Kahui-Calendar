@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { logout } from "@/lib/actions/auth";
+import { ensureUpcomingJobsGenerated } from "@/lib/recurrences";
 
 export default async function AppLayout({
   children,
@@ -8,6 +9,7 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const user = await requireUser();
+  await ensureUpcomingJobsGenerated(user.id);
 
   return (
     <div className="flex min-h-dvh flex-col">

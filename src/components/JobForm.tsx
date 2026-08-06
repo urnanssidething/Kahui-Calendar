@@ -48,6 +48,7 @@ type JobFormProps = {
         assignedToId: string | null;
         notes: string | null;
         updatedAt: string;
+        recurrenceId: string | null;
       };
     }
 );
@@ -110,6 +111,20 @@ export function JobForm(props: JobFormProps) {
             defaultValue="false"
           />
         </>
+      )}
+
+      {props.mode === "edit" && props.job.recurrenceId && (
+        <div className="rounded-lg bg-neutral-100 p-4 text-sm text-neutral-700">
+          <p className="mb-2 font-medium">This job repeats. Apply changes to:</p>
+          <label className="mb-1 flex items-center gap-2">
+            <input type="radio" name="applyScope" value="this" defaultChecked />
+            This job only
+          </label>
+          <label className="flex items-center gap-2">
+            <input type="radio" name="applyScope" value="future" />
+            This and all future jobs
+          </label>
+        </div>
       )}
 
       {state.status === "error" && (

@@ -3,6 +3,7 @@ import { neonConfig } from "@neondatabase/serverless";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import ws from "ws";
 import { PrismaClient, ServiceType } from "../src/generated/prisma/client";
+import { nzDayOfWeek } from "../src/lib/date";
 import bcrypt from "bcryptjs";
 
 neonConfig.webSocketConstructor = ws;
@@ -67,10 +68,17 @@ async function main() {
     },
   });
 
+  let daysBack = 0;
+  while (nzDayOfWeek(nzDate(-daysBack, 0)) !== 2) {
+    daysBack++;
+  }
+  const recurrenceStart = nzDate(-daysBack, 0);
+
   await db.recurrence.create({
     data: {
       clientId: janet.id,
       pattern: "fortnightly",
+      startDate: recurrenceStart,
       dayOfWeek: 2, // Tuesday
       time: "09:00",
       duration: 120,

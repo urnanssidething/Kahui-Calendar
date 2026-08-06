@@ -94,7 +94,8 @@ model Recurrence {
   clientId    String            @map("client_id")
   client      Client            @relation(fields: [clientId], references: [id])
   pattern     RecurrencePattern
-  dayOfWeek   Int               @map("day_of_week") // 0=Sunday .. 6=Saturday
+  startDate   DateTime          @map("start_date") // NZ midnight of the first occurrence; anchors fortnightly/monthly parity
+  dayOfWeek   Int               @map("day_of_week") // 0=Sunday .. 6=Saturday, derived from startDate
   time        String            // "HH:mm" in Pacific/Auckland
   duration    Int               // minutes
   serviceType ServiceType       @map("service_type")

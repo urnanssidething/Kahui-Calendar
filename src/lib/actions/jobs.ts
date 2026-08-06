@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { nzWallTimeToUtc } from "@/lib/date";
+import { nzWallTimeToUtc, nzCalendarDayKey } from "@/lib/date";
 import type { JobFormState } from "@/lib/jobFormState";
 
 type ParsedJobFields =
@@ -86,6 +86,8 @@ export async function updateJob(
   const jobId = String(formData.get("jobId") ?? "");
   const expectedUpdatedAt = String(formData.get("expectedUpdatedAt") ?? "");
   const force = formData.get("force") === "true";
+  const applyScope = String(formData.get("applyScope") ?? "this");
+  const time = String(formData.get("time") ?? "");
 
   const parsed = readJobFields(formData);
   if ("error" in parsed) return { status: "error", message: parsed.error };
@@ -108,6 +110,50 @@ export async function updateJob(
     where: { id: jobId },
     data: { ...parsed.data, updatedById: user.id },
   });
+
+  if (applyScope === "future" && current.recurrenceId) {
+    const durationMinutes = Math.round(
+      (parsed.data.endsAt.getTime() - parsed.data.startsAt.getTime()) / 60_000
+    );
+
+    await db.recurrence.update({
+      where: { id: current.recurrenceId },
+      data: {
+        time,
+        duration: durationMinutes,
+        serviceType: parsed.data.serviceType,
+        price: parsed.data.price,
+        address: parsed.data.address,
+      },
+    });
+
+    const futureJobs = await db.job.findMany({
+      where: {
+        recurrenceId: current.recurrenceId,
+        id: { not: jobId },
+        startsAt: { gt: new Date() },
+        status: "scheduled",
+      },
+    });
+
+    for (const futureJob of futureJobs) {
+      const dateKey = nzCalendarDayKey(futureJob.startsAt);
+      const newStartsAt = nzWallTimeToUtc(dateKey, time);
+      const newEndsAt = new Date(newStartsAt.getTime() + durationMinutes * 60_000);
+      await db.job.update({
+        where: { id: futureJob.id },
+        data: {
+          startsAt: newStartsAt,
+          endsAt: newEndsAt,
+          serviceType: parsed.data.serviceType,
+          price: parsed.data.price,
+          address: parsed.data.address,
+          assignedToId: parsed.data.assignedToId,
+          updatedById: user.id,
+        },
+      });
+    }
+  }
 
   redirect(`/jobs/${jobId}`);
 }

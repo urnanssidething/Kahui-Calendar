@@ -2,11 +2,20 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { setClientArchived } from "@/lib/actions/clients";
+import { setRecurrenceActive } from "@/lib/actions/recurrences";
 import { SERVICE_TYPE_LABELS } from "@/lib/jobs";
 import { formatNZDate, formatNZTime } from "@/lib/date";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 
 export const dynamic = "force-dynamic";
+
+const PATTERN_LABELS: Record<string, string> = {
+  weekly: "Weekly",
+  fortnightly: "Fortnightly",
+  monthly: "Every 4 weeks",
+};
+
+const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default async function ClientDetailPage(props: PageProps<"/clients/[id]">) {
   const { id } = await props.params;
@@ -15,6 +24,7 @@ export default async function ClientDetailPage(props: PageProps<"/clients/[id]">
     where: { id },
     include: {
       jobs: { orderBy: { startsAt: "desc" }, take: 50 },
+      recurrences: { orderBy: { createdAt: "asc" } },
     },
   });
 
@@ -96,6 +106,59 @@ export default async function ClientDetailPage(props: PageProps<"/clients/[id]">
             </ConfirmSubmitButton>
           )}
         </form>
+      </div>
+
+      <div className="mb-5">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-sm font-medium text-neutral-500">
+            Recurring jobs
+          </h2>
+          <Link
+            href={`/clients/${client.id}/recurrences/new`}
+            className="text-sm font-medium text-neutral-900"
+          >
+            + Add
+          </Link>
+        </div>
+        {client.recurrences.length === 0 ? (
+          <p className="text-sm text-neutral-500">No recurring jobs.</p>
+        ) : (
+          <div className="overflow-hidden rounded-xl bg-white">
+            {client.recurrences.map((r) => (
+              <div
+                key={r.id}
+                className="flex items-center justify-between gap-3 border-b border-neutral-100 px-4 py-3 text-sm last:border-b-0"
+              >
+                <div>
+                  <p className="font-medium text-neutral-900">
+                    {PATTERN_LABELS[r.pattern] ?? r.pattern} ·{" "}
+                    {WEEKDAY_LABELS[r.dayOfWeek]} {r.time}
+                  </p>
+                  <p className="text-neutral-500">
+                    {SERVICE_TYPE_LABELS[r.serviceType] ?? r.serviceType} · $
+                    {Number(r.price).toFixed(2)}
+                    {!r.active && " · Inactive"}
+                  </p>
+                </div>
+                <form action={setRecurrenceActive}>
+                  <input type="hidden" name="recurrenceId" value={r.id} />
+                  <input type="hidden" name="clientId" value={client.id} />
+                  <input
+                    type="hidden"
+                    name="active"
+                    value={r.active ? "false" : "true"}
+                  />
+                  <button
+                    type="submit"
+                    className="shrink-0 rounded-lg border border-neutral-300 px-3 py-2 text-xs font-medium active:bg-neutral-100"
+                  >
+                    {r.active ? "Deactivate" : "Reactivate"}
+                  </button>
+                </form>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <h2 className="mb-2 text-sm font-medium text-neutral-500">
