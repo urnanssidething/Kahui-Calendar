@@ -41,6 +41,33 @@ export function nzMidnightUtc(offsetDays = 0): Date {
   return new Date(calendarDate.getTime() - offset * 60_000);
 }
 
+/** Converts a "YYYY-MM-DD" + "HH:mm" NZ wall-clock time into the equivalent UTC instant. */
+export function nzWallTimeToUtc(dateStr: string, timeStr: string): Date {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const [hour, minute] = timeStr.split(":").map(Number);
+  const guess = new Date(Date.UTC(year, month - 1, day, hour, minute));
+  const offset = nzOffsetMinutes(guess);
+  return new Date(guess.getTime() - offset * 60_000);
+}
+
+/** "YYYY-MM-DD" for the given instant's NZ calendar day — matches <input type="date">. */
+export function nzDateInputValue(date: Date): string {
+  return nzCalendarDayKey(date);
+}
+
+/** "HH:mm" (24-hour) for the given instant's NZ wall clock — matches <input type="time">. */
+export function nzTimeInputValue(date: Date): string {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: NZ_TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+  const hour = parts.find((p) => p.type === "hour")?.value ?? "00";
+  const minute = parts.find((p) => p.type === "minute")?.value ?? "00";
+  return `${hour}:${minute}`;
+}
+
 /** [start, end) UTC instants covering one NZ calendar day, `offsetDays` from today. */
 export function nzDayRange(offsetDays = 0): { start: Date; end: Date } {
   const start = nzMidnightUtc(offsetDays);
